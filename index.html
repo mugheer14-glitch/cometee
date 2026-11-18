@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Prize Committee Hub - Cloud Live Edition</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #eef2f7; 
+            margin: 0; 
+            padding: 15px; 
+            color: #333; 
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none; 
+        }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
+        .subtitle { text-align: center; font-size: 13px; color: #7f8c8d; margin-bottom: 25px; }
+        .card { background: #fafafa; border: 1px solid #e1e8ed; padding: 18px; border-radius: 10px; margin-bottom: 15px; }
+        label { display: block; margin-top: 12px; font-weight: bold; font-size: 13px; color: #444; }
+        input, select, textarea { width: 100%; padding: 11px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { background: #27ae60; color: white; border: none; padding: 12px; width: 100%; margin-top: 18px; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #219653; }
+        .payment-box { background: #f0f4f8; border-left: 5px solid #2980b9; padding: 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; line-height: 1.5; }
+        .result-box { background: #e8f8f5; border-left: 5px solid #27ae60; padding: 14px; margin-top: 12px; border-radius: 6px; }
+        .admin-box { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 14px; margin-top: 12px; border-radius: 6px; }
+        .hidden-section { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏆 Lucky Prize Committee Hub</h2>
+    <div class="subtitle">Cloud Real-Time Secure Verification & Fair Draw System</div>
+    
+    <!-- STEP 1: Registration & Deposit Form -->
+    <div class="card" id="registerScreen">
+        <h3>📝 Committee Join & Deposit Form</h3>
+        <p style="font-size: 13px; color: #555;">Pehle neeche diye gaye accounts par amount transfer karein, phir sahi T.ID ke sath form fill karein.</p>
+        
+        <div class="payment-box">
+            <b>💳 Official Deposit Accounts:</b><br>
+            • JazzCash: <span style="color: #c0392b; font-weight: bold;">0344-2343168</span> (Mugheer)<br>
+            • EasyPaisa: <span style="color: #2980b9; font-weight: bold;">0332-5889195</span> (Mugheer)
+        </div>
+
+        <label>Aapka Mobile Number (Account ID):</label>
+        <input type="text" id="regPhone" placeholder="03XXXXXXXXX">
+
+        <label>Committee Type Select Karein (Rs. 20 to Rs. 100):</label>
+        <select id="regCommitteeType" onchange="updateDepositInstruction()">
+            <option value="20" selected>Rs. 20 Committee</option>
+            <option value="50">Rs. 50 Committee</option>
+            <option value="75">Rs. 75 Committee</option>
+            <option value="100">Rs. 100 Committee</option>
+        </select>
+
+        <p id="depositNotice" style="font-size: 13px; color: #c0392b; font-weight: bold; margin-top: 5px;">
+            * Aapko Rs. 20 jama karwanay honge.
+        </p>
+
+        <label>JazzCash / EasyPaisa Transaction ID (TID) / Receipt Number:</label>
+        <input type="text" id="regTid" placeholder="e.g. 38291029381">
+
+        <button onclick="submitRegistration()">Deposit Verify & Request Submit Karein</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;">Already Registered? <a href="#" onclick="showLoginScreen()">Login Karein</a> | <a href="#" onclick="showAdminLogin()" style="color: #e67e22; font-weight: bold;">Admin Login ⚙️</a></p>
+    </div>
+
+    <!-- STEP 1.5: Login Screen for Normal Users -->
+    <div class="card hidden-section" id="loginScreen">
+        <h3>📱 Member Login</h3>
+        <label>Mobile Number:</label>
+        <input type="text" id="loginPhone" placeholder="03XXXXXXXXX">
+
+        <button onclick="userLogin()">Dashboard Kholen</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;"><a href="#" onclick="showRegisterScreen()">← New Registration par jayein</a></p>
+    </div>
+
+    <!-- STEP 1.6: Direct Admin Login Screen -->
+    <div class="card hidden-section" id="adminLoginScreen">
+        <h3 style="color: #e67e22;">⚙️ Owner / Admin Direct Login</h3>
+        <label>Admin Mobile Number:</label>
+        <input type="text" id="adminLoginPhone" placeholder="03XXXXXXXXX">
+
+        <label>Secret PIN Code:</label>
+        <input type="password" id="adminLoginPin" placeholder="Enter Secret PIN">
+
+        <button onclick="adminDirectLogin()" style="background: #e67e22;">Admin Panel Kholen</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;"><a href="#" onclick="showRegisterScreen()">← Home par wapas jayein</a></p>
+    </div>
+
+    <!-- STEP 2: User Dashboard -->
+    <div class="card hidden-section" id="userDashboard">
+        <h3>👋 Welcome, <span id="userDisplayName"></span></h3>
+        <p id="roleStatusText" style="font-size: 13px; font-weight: bold;"></p>
+        
+        <div id="userActionArea" class="payment-box">
+            <p><b>Status:</b> Aapki request admin ke paas verification ke liye mojood hai. Jaise hi Admin approve karega aur Draw run hoga, aapko yahan notification mil jayega.</p>
+        </div>
+
+        <div id="announcementBox" class="result-box hidden-section">
+            <h4>📢 Admin Announcement / Notification:</h4>
+            <p id="announcementText" style="font-weight: bold; color: #27ae60;"></p>
+        </div>
+
+        <!-- Admin Control Panel -->
+        <div id="adminPanel" class="hidden-section" style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
+            <h3 style="color: #e67e22;">⚙️ Owner / Admin Control Panel</h3>
+            
+            <div class="admin-box">
+                <h4>📥 Cloud Pending Deposit Requests (Live Sync):</h4>
+                <ul id="pendingList" style="padding-left: 15px; font-size: 13px;"></ul>
+            </div>
+
+            <div class="admin-box" style="background: #eaf2f8; border-left-color: #2980b9;">
+                <h4>👥 Cloud Approved Active Members:</h4>
+                <ul id="activeMembersList" style="padding-left: 15px; font-size: 13px;"></ul>
+            </div>
+
+            <label>Secret Team Numbers (Comma separated, e.g. 03442343168,03001112223):</label>
+            <input type="text" id="secretTeamNumbers" placeholder="03XXXXXXXXX, 03YYYYYYYYY">
+
+            <label>Broadcast Notification Message for All Participants:</label>
+            <textarea id="broadcastMessage" rows="2" placeholder="e.g. Aaj raat 9 baje draw khulnay wala hai tayyar rahein!"></textarea>
+            <button onclick="sendBroadcast()" style="background: #2980b9; margin-top: 5px;">📢 Sabko Notification Bhejein</button>
+
+            <button onclick="runAdvancedDraw()" style="background: #e67e22; margin-top: 15px;">🎲 10% Cut Kaat Kar Draw Run Karein</button>
+            <button onclick="logoutAdmin()" style="background: #7f8c8d; margin-top: 10px;">🔒 Logout</button>
+        </div>
+    </div>
+
+    <!-- Results Display -->
+    <div class="card hidden-section" id="resultsScreen">
+        <h3>🎉 Draw Results</h3>
+        <div class="admin-box" id="adminEarningsBox" style="display:none;">
+            <h4>💼 Owner 10% Cut:</h4>
+            <p id="earningsText"></p>
+        </div>
+        <div class="result-box">
+            <h4>🏆 Is Round ke Winners:</h4>
+            <p id="winnersDisplay"></p>
+            <p id="shareDisplay"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- FIREBASE CLOUD CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCQ5copLZvjnzHpn3m9TenLxYEE4IDWac",
+        authDomain: "cometee-walay.firebaseapp.com",
+        databaseURL: "https://cometee-walay-default-rtdb.firebaseio.com",
+        projectId: "cometee-walay",
+        storageBucket: "cometee-walay.appspot.com",
+        messagingSenderId: "686011949816",
+        appId: "1:686011949816:web:30c264f0c87a07d289518d",
+        measurementId: "G-G5BQL4N8PG"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const dbRef = firebase.database().ref();
+
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "F12" || 
+            (event.ctrlKey && event.shiftKey && event.key === "I") || 
+            (event.ctrlKey && event.key === "U")) {
+            event.preventDefault();
+            alert("Security Alert: Yeh action allowed nahi hai!");
+        }
+    });
+
+    const ADMIN_PHONES = ["03442343168", "03325889195"];
+    const ENCODED_PIN = "Nzg2MA=="; // Secret PIN: 7860
+
+    function verifyPin(inputPin) {
+        try {
+            return btoa(inputPin) === ENCODED_PIN;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    function updateDepositInstruction() {
+        let val = document.getElementById('regCommitteeType').value;
+        document.getElementById('depositNotice').innerText = `* Aapko Rs. ${val} jama karwanay honge.`;
+    }
+
+    function showLoginScreen() {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+    }
+
+    function showRegisterScreen() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('registerScreen').style.display = 'block';
+    }
+
+    function showAdminLogin() {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'block';
+    }
+
+    // Submit to Cloud Firebase Database
+    function submitRegistration() {
+        let phone = document.getElementById('regPhone').value.trim();
+        let amount = document.getElementById('regCommitteeType').value;
+        let tid = document.getElementById('regTid').value.trim();
+
+        if(phone === "" || tid === "") {
+            alert("Barah-e-karam apna mobile number aur Transaction ID (TID) enter karein!");
+            return;
+        }
+
+        if(ADMIN_PHONES.includes(phone)) {
+            alert("Yeh number Admin ka hai! Aapko register hone ki zaroorat nahi, 'Admin Login' use karein.");
+            return;
+        }
+
+        let safeKey = phone.replace(/[.#$\/\[\]]/g, "_");
+
+        dbRef.child('members/' + safeKey).set({
+            phone: phone,
+            amount: amount,
+            tid: tid,
+            status: 'Pending'
+        }, function(error) {
+            if (error) {
+                alert("Data save karne mein masla hua: " + error.message);
+            } else {
+                alert("Mubarak ho! Aapki request cloud par submit ho gayi hai. Admin verification ke baad aap login kar sakenge.");
+                showLoginScreen();
+            }
+        });
+    }
+
+    function userLogin() {
+        let phone = document.getElementById('loginPhone').value.trim();
+        if(phone === "") {
+            alert("Mobile number enter karein!");
+            return;
+        }
+
+        if(ADMIN_PHONES.includes(phone)) {
+            alert("Yeh admin number hai! Barah-e-karam 'Admin Login' par ja kar Secret PIN enter karein.");
+            showAdminLogin();
+            return;
+        }
+
+        let safeKey = phone.replace(/[.#$\/\[\]]/g, "_");
+        dbRef.child('members/' + safeKey).once('value').then((snapshot) => {
+            if (!snapshot.exists()) {
+                alert("Yeh number register nahi hai! Pehle deposit form fill kar ke request submit karein.");
+                showRegisterScreen();
+            } else {
+                openDashboard(phone);
+            }
+        });
+    }
+
+    function adminDirectLogin() {
+        let phone = document.getElementById('adminLoginPhone').value.trim();
+        let pin = document.getElementById('adminLoginPin').value.trim();
+
+        if(!ADMIN_PHONES.includes(phone)) {
+            alert("Yeh ghalat Admin number hai!");
+            return;
+        }
+
+        if(!verifyPin(pin)) {
+            alert("Ghalat Secret PIN!");
+            return;
+        }
+
+        openDashboard(phone);
+    }
+
+    function logoutAdmin() {
+        showRegisterScreen();
+    }
+
+    function openDashboard(phone) {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('userDashboard').style.display = 'block';
+        document.getElementById('userDisplayName').innerText = phone;
+
+        dbRef.child('announcement').on('value', (snapshot) => {
+            let msg = snapshot.val();
+            if(msg) {
+                document.getElementById('announcementBox').style.display = 'block';
+                document.getElementById('announcementText').innerText = msg;
+            }
+        });
+
+        if(ADMIN_PHONES.includes(phone)) {
+            document.getElementById('roleStatusText').innerText = "Status: Verified Administrator / Owner";
+            document.getElementById('roleStatusText').style.color = "#e67e22";
+            document.getElementById('adminPanel').style.display = 'block';
+            document.getElementById('userActionArea').style.display = 'none';
+            listenAdminPanelData();
+        } else {
+            let safeKey = phone.replace(/[.#$\/\[\]]/g, "_");
+            dbRef.child('members/' + safeKey).on('value', (snapshot) => {
+                let m = snapshot.val();
+                let status = m ? m.status : 'Pending';
+                if(status === 'Active') {
+                    document.getElementById('roleStatusText').innerText = "Status: Active Member (Payment Verified ✅)";
+                    document.getElementById('roleStatusText').style.color = "#27ae60";
+                    document.getElementById('userActionArea').innerHTML = "<p>✅ Aapki payment verify ho chuki hai. Aap committee ka hissa hain!</p>";
+                } else {
+                    document.getElementById('roleStatusText').innerText = "Status: Verification Pending ⏳ (Admin check kar raha hai)";
+                    document.getElementById('roleStatusText').style.color = "#e67e22";
+                }
+            });
+        }
+    }
+
+    function listenAdminPanelData() {
+        dbRef.child('members').on('value', (snapshot) => {
+            let pendingListEl = document.getElementById('pendingList');
+            let activeListEl = document.getElementById('activeMembersList');
+            
+            pendingListEl.innerHTML = "";
+            activeListEl.innerHTML = "";
+            
+            let pendingFound = false;
+            let activeFound = false;
+
+            snapshot.forEach((childSnapshot) => {
+                let m = childSnapshot.val();
+                let safeKey = childSnapshot.key;
+
+                if(m.status === 'Pending') {
+                    pendingFound = true;
+                    pendingListEl.innerHTML += `<li><b>${m.phone}</b> — Amt: Rs. ${m.amount} | TID: <span style="color:#c0392b; font-weight:bold;">${m.tid}</span> <button onclick="approveMember('${safeKey}')" style="padding:2px 8px; width:auto; font-size:12px; margin:0 5px; background:#27ae60;">Approve ✅</button></li>`;
+                } else if(m.status === 'Active') {
+                    activeFound = true;
+                    activeListEl.innerHTML += `<li><b>${m.phone}</b> (Rs. ${m.amount}) <span style="color:green;">✔ Active</span></li>`;
+                }
+            });
+
+            if(!pendingFound) {
+                pendingListEl.innerHTML = "<li>Koi pending request nahi hai.</li>";
+            }
+            if(!activeFound) {
+                activeListEl.innerHTML = "<li>Abhi koi active member nahi hai.</li>";
+            }
+        });
+    }
+
+    function approveMember(safeKey) {
+        dbRef.child('members/' + safeKey).update({ status: 'Active' }, function(error) {
+            if(!error) {
+                alert("Member kamyabi se approve ho gaya hai!");
+            }
+        });
+    }
+
+    function sendBroadcast() {
+        let msg = document.getElementById('broadcastMessage').value.trim();
+        if(msg === "") {
+            alert("Message likhein!");
+            return;
+        }
+        dbRef.child('announcement').set(msg, function(error) {
+            if(!error) {
+                alert("Notification sabhi members ko broadcast kar diya gaya hai!");
+            }
+        });
+    }
+
+    function runAdvancedDraw() {
+        dbRef.child('members').once('value', (snapshot) => {
+            let activeMembersList = [];
+            snapshot.forEach((childSnapshot) => {
+                let m = childSnapshot.val();
+                if(m.status === 'Active') {
+                    activeMembersList.push(m);
+                }
+            });
+
+            if(activeMembersList.length === 0) {
+                alert("Koi bhi active member mojood nahi hai!");
+                return;
+            }
+
+            let totalPool = activeMembersList.reduce((sum, m) => sum + parseFloat(m.amount), 0);
+            let ownerCut = totalPool * 0.10; 
+            let remainingPool = totalPool - ownerCut;
+
+            let winnersCount = Math.max(1, Math.round(activeMembersList.length * 0.3));
+            let perWinnerShare = remainingPool / winnersCount;
+
+            let secretTeamInput = document.getElementById('secretTeamNumbers').value;
+            let secretTeam = secretTeamInput.split(',').map(s => s.trim()).filter(s => s !== "");
+
+            let currentWinners = [];
+            let activePhones = activeMembersList.map(m => m.phone);
+
+            let availableTeamMembers = activePhones.filter(m => secretTeam.includes(m));
+            if(availableTeamMembers.length > 0) {
+                let forcedWinner = availableTeamMembers[Math.floor(Math.random() * availableTeamMembers.length)];
+                currentWinners.push(forcedWinner);
+            }
+
+            let remainingPoolMembers = activePhones.filter(m => !currentWinners.includes(m));
+            while(currentWinners.length < winnersCount && remainingPoolMembers.length > 0) {
+                let randomIndex = Math.floor(Math.random() * remainingPoolMembers.length);
+                let selected = remainingPoolMembers[randomIndex];
+                currentWinners.push(selected);
+                remainingPoolMembers.splice(randomIndex, 1);
+            }
+
+            dbRef.child('announcement').set(`🏆 Draw Run Ho Chuka Hai! Winners: ${currentWinners.join(', ')}`);
+
+            document.getElementById('resultsScreen').style.display = 'block';
+            document.getElementById('adminEarningsBox').style.display = 'block';
+            document.getElementById('earningsText').innerText = `Aapka 10% Profit: Rs. ${ownerCut.toFixed(2)}`;
+            
+            document.getElementById('winnersDisplay').innerHTML = currentWinners.map(w => `• <b>${w}</b>`).join('<br>');
+            document.getElementById('shareDisplay').innerHTML = `<b>Har Winner ka Hissa:</b> Rs. ${perWinnerShare.toFixed(2)}`;
+            
+            alert("Draw successfully run ho gaya hai aur sabhi ko notification bhej diya gaya hai!");
+        });
+    }
+</script>
+
+</body>
+</html>
