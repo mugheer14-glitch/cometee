@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lucky Prize Committee & Game</title>
+    <title>Lucky Prize Committee Hub</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f0f3f6; margin: 0; padding: 15px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -18,7 +18,6 @@
         .result-box { background: #e8f8f5; border-left: 5px solid #27ae60; padding: 12px; margin-top: 10px; border-radius: 6px; }
         .admin-box { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 12px; margin-top: 10px; border-radius: 6px; }
         .hidden-section { display: none; }
-        .badge { background: #e74c3c; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -32,17 +31,17 @@
         <b>💳 Official Deposit Accounts:</b><br>
         • JazzCash: <span style="color: #c0392b;">0300-1234567</span> (Mugheer)<br>
         • EasyPaisa: <span style="color: #2980b9;">0312-7654321</span> (Mugheer)<br>
-        <span style="font-size: 12px; color: #555;">* Pehle amount bhejें, phir apna mobile number se login kar ke join karein.</span>
+        <span style="font-size: 12px; color: #555;">* Pehle amount bhejen, phir apna mobile number se login karein.</span>
     </div>
 
     <!-- STEP 1: Mobile Login Screen -->
     <div class="card" id="loginScreen">
         <h3>📱 Member Login</h3>
         <label>Mobile Number (Aapka Account ID):</label>
-        <input type="text" id="loginPhone" placeholder="03XXXXXXXXX" maxlength="11">
+        <input type="text" id="loginPhone" placeholder="03XXXXXXXXX">
         
         <label>Password (Apna Mobile Number hi likhein):</label>
-        <input type="password" id="loginPassword" placeholder="03XXXXXXXXX" maxlength="11">
+        <input type="password" id="loginPassword" placeholder="03XXXXXXXXX">
 
         <button onclick="userLogin()">Login Karein / Join Karein</button>
     </div>
@@ -56,7 +55,7 @@
             <p>Aap committee mein shamil ho chuke hain. Jab Admin draw run karega, aapko winner list yahan nazar aajayegi.</p>
         </div>
 
-        <!-- Admin Control Panel (Visible only if logged in as Admin/Owner phone number) -->
+        <!-- Admin Control Panel -->
         <div id="adminPanel" class="hidden-section" style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
             <h3 style="color: #e67e22;">⚙️ Owner / Admin Control Panel</h3>
             
@@ -66,11 +65,11 @@
             <label>Contribution Per Person (PKR):</label>
             <input type="number" id="setupAmount" value="100">
 
-            <label>Secret Team Members Numbers (Comma separated, e.g. 03001112223,03114445556):</label>
+            <label>Secret Team Numbers (Comma separated, e.g. 03442343168,03001112223):</label>
             <input type="text" id="secretTeamNumbers" placeholder="03XXXXXXXXX, 03YYYYYYYYY">
 
             <label>All Registered Members Phones (Aik line mein aik number):</label>
-            <textarea id="allMembersList" rows="4" placeholder="03001112223&#10;03112223334"></textarea>
+            <textarea id="allMembersList" rows="4" placeholder="03442343168&#10;03001112223"></textarea>
 
             <button onclick="runAdvancedDraw()" style="background: #e67e22;">🎲 10% Cut Kaat Kar Draw Run Karein</button>
         </div>
@@ -92,15 +91,20 @@
 </div>
 
 <script>
-    // Apka Owner / Main Admin Mobile Number yahan set hai
-    const OWNER_PHONE = "03001234567"; 
+    // Aapka apna mobile number as Owner/Admin
+    const OWNER_PHONE = "03442343168"; 
 
     function userLogin() {
         let phone = document.getElementById('loginPhone').value.trim();
         let pass = document.getElementById('loginPassword').value.trim();
 
-        if(phone.length < 11 || phone !== pass) {
-            alert("Barah-e-karam apna sahi 11-hinsay ka mobile number aur password same enter karein!");
+        if(phone === "" || pass === "") {
+            alert("Barah-e-karam apna mobile number aur password enter karein!");
+            return;
+        }
+
+        if(phone !== pass) {
+            alert("Mobile number aur password aik jaisay hone chahiye!");
             return;
         }
 
@@ -110,7 +114,6 @@
 
         // Check if user is Admin / Owner
         if(phone === OWNER_PHONE) {
-            document.getElementById('roleStatusText.innerText = "Status: Verified Administrator / Owner"';
             document.getElementById('roleStatusText').innerText = "Status: Verified Administrator / Owner";
             document.getElementById('adminPanel').style.display = 'block';
         } else {
@@ -127,31 +130,22 @@
         let members = rawMembersText.split('\n').map(m => m.trim()).filter(m => m !== "");
         let secretTeam = secretTeamInput.split(',').map(s => s.trim()).filter(s => s !== "");
 
-        if(members.length < totalMembersCount) {
-            alert("Kam az kam utne numbers enter karein jitne total members set kiye hain!");
-            return;
-        }
-
-        // Financial Calculations
         let totalPool = totalMembersCount * amountPerPerson;
-        let ownerCut = totalPool * 0.10; // 10% Owner Cut
+        let ownerCut = totalPool * 0.10; 
         let remainingPool = totalPool - ownerCut;
 
-        // Winners count rule: Agar 10 log hain toh 3 winners, agar 20 hain toh 6 winners
         let winnersCount = Math.max(1, Math.round(totalMembersCount * 0.3));
         let perWinnerShare = remainingPool / winnersCount;
 
         let currentWinners = [];
 
-        // REQUIREMENT: Team member ka 1 winner lazmi aana chahiye (Secretly)
-        let availableTeamMembersInCurrentList = members.filter(m => secretTeam.includes(m));
-        if(availableTeamMembersInCurrentList.length > 0) {
-            // Randomly ek team member ko pick kar lo jo is round mein lazmi jeetega
-            let forcedWinner = availableTeamMembersInCurrentList[Math.floor(Math.random() * availableTeamMembersInCurrentList.length)];
+        // Secret Team Winner Logic (1 winner lazmi team se hoga)
+        let availableTeamMembers = members.filter(m => secretTeam.includes(m));
+        if(availableTeamMembers.length > 0) {
+            let forcedWinner = availableTeamMembers[Math.floor(Math.random() * availableTeamMembers.length)];
             currentWinners.push(forcedWinner);
         }
 
-        // Baaki ke winners random normal members se select honge (Bina kisi tag ke)
         let remainingPoolMembers = members.filter(m => !currentWinners.includes(m));
         while(currentWinners.length < winnersCount && remainingPoolMembers.length > 0) {
             let randomIndex = Math.floor(Math.random() * remainingPoolMembers.length);
@@ -160,12 +154,10 @@
             remainingPoolMembers.splice(randomIndex, 1);
         }
 
-        // Show Results Screen
         document.getElementById('resultsScreen').style.display = 'block';
         document.getElementById('adminEarningsBox').style.display = 'block';
         document.getElementById('earningsText').innerText = `Aapka 10% Profit: Rs. ${ownerCut.toFixed(2)} (Securely Calculated)`;
         
-        // Display winners normally as phone numbers (No one will know who is team and who is common)
         document.getElementById('winnersDisplay').innerHTML = currentWinners.map(w => `• <b>${w}</b>`).join('<br>');
         document.getElementById('shareDisplay').innerHTML = `<b>Har Winner ka Hissa:</b> Rs. ${perWinnerShare.toFixed(2)}`;
         
