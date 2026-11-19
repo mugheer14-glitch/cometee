@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lucky Prize Committee Hub - Cloud Edition</title>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #eef2f7; 
+            margin: 0; 
+            padding: 15px; 
+            color: #333; 
+            -webkit-user-select: none; 
+            -moz-user-select: none; 
+            -ms-user-select: none; 
+            user-select: none; 
+        }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+        h2 { text-align: center; color: #2c3e50; margin-bottom: 5px; }
+        .subtitle { text-align: center; font-size: 13px; color: #7f8c8d; margin-bottom: 25px; }
+        .card { background: #fafafa; border: 1px solid #e1e8ed; padding: 18px; border-radius: 10px; margin-bottom: 15px; }
+        label { display: block; margin-top: 12px; font-weight: bold; font-size: 13px; color: #444; }
+        input, select, textarea { width: 100%; padding: 11px; margin-top: 6px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        button { background: #27ae60; color: white; border: none; padding: 12px; width: 100%; margin-top: 18px; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        button:hover { background: #219653; }
+        .payment-box { background: #f0f4f8; border-left: 5px solid #2980b9; padding: 14px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; line-height: 1.5; }
+        .result-box { background: #e8f8f5; border-left: 5px solid #27ae60; padding: 14px; margin-top: 12px; border-radius: 6px; }
+        .admin-box { background: #fef9e7; border-left: 5px solid #f1c40f; padding: 14px; margin-top: 12px; border-radius: 6px; }
+        .tier-section { background: #fdfefe; border: 1px solid #d5dbdb; padding: 12px; border-radius: 8px; margin-top: 10px; }
+        .hidden-section { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🏆 Lucky Prize Committee Hub</h2>
+    <div class="subtitle">Cloud Committee Management & Entry-Based Random Draw System</div>
+    
+    <!-- STEP 1: Registration & Deposit Form -->
+    <div class="card" id="registerScreen">
+        <h3>📝 Committee Join & Deposit Form</h3>
+        <p style="font-size: 13px; color: #555;">Pehle neeche diye gaye accounts par amount transfer karein, phir sahi T.ID ke sath form fill karein. Aik mobile number multiple entries le sakta hai, lekin har entry ke liye nayi TID lazmi hai. Aik TID poore system mein sirf aik baar use ho sakti hai.</p>
+        
+        <div class="payment-box">
+            <b>💳 Official Deposit Accounts:</b><br>
+            • JazzCash: <span style="color: #c0392b; font-weight: bold;">0344-2343168</span> (Mugheer)<br>
+            • EasyPaisa: <span style="color: #2980b9; font-weight: bold;">0332-5889195</span> (Mugheer)
+        </div>
+
+        <label>Aapka Mobile Number (Account ID):</label>
+        <input type="text" id="regPhone" placeholder="03XXXXXXXXX">
+
+        <label>Committee Category (Amount Select Karein):</label>
+        <select id="regCommitteeType" onchange="updateDepositInstruction()">
+            <option value="20" selected>Rs. 20 Committee</option>
+            <option value="50">Rs. 50 Committee</option>
+            <option value="75">Rs. 75 Committee</option>
+            <option value="100">Rs. 100 Committee</option>
+        </select>
+
+        <p id="depositNotice" style="font-size: 13px; color: #c0392b; font-weight: bold; margin-top: 5px;">
+            * Aapko Rs. 20 jama karwanay honge.
+        </p>
+
+        <label>Kitne Members Wali Committee Mein Hissa Lena Hai?</label>
+        <select id="regTargetLimit">
+            <option value="5">5 Members Committee</option>
+            <option value="10" selected>10 Members Committee</option>
+            <option value="15">15 Members Committee</option>
+            <option value="20">20 Members Committee</option>
+        </select>
+
+        <label>JazzCash / EasyPaisa Transaction ID (TID) / Receipt Number:</label>
+        <input type="text" id="regTid" placeholder="e.g. 38291029381">
+
+        <button onclick="submitRegistration()">Deposit Verify & Request Submit Karein</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;">Already Registered? <a href="#" onclick="showLoginScreen()">Login Karein</a> | <a href="#" onclick="showAdminLogin()" style="color: #e67e22; font-weight: bold;">Admin Login ⚙️</a></p>
+    </div>
+
+    <!-- STEP 1.5: Login Screen for Normal Users -->
+    <div class="card hidden-section" id="loginScreen">
+        <h3>📱 Member Login</h3>
+        <label>Mobile Number:</label>
+        <input type="text" id="loginPhone" placeholder="03XXXXXXXXX">
+
+        <button onclick="userLogin()">Dashboard Kholen</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;"><a href="#" onclick="showRegisterScreen()">← New Registration par jayein</a></p>
+    </div>
+
+    <!-- STEP 1.6: Direct Admin Login Screen -->
+    <div class="card hidden-section" id="adminLoginScreen">
+        <h3 style="color: #e67e22;">⚙️ Owner / Admin Direct Login</h3>
+        <label>Admin Mobile Number:</label>
+        <input type="text" id="adminLoginPhone" placeholder="03XXXXXXXXX">
+
+        <label>Secret PIN Code:</label>
+        <input type="password" id="adminLoginPin" placeholder="Enter Secret PIN">
+
+        <button onclick="adminDirectLogin()" style="background: #e67e22;">Admin Panel Kholen</button>
+        <p style="text-align: center; margin-top: 12px; font-size: 13px;"><a href="#" onclick="showRegisterScreen()">← Home par wapas jayein</a></p>
+    </div>
+
+    <!-- STEP 2: User Dashboard -->
+    <div class="card hidden-section" id="userDashboard">
+        <h3>👋 Welcome, <span id="userDisplayName"></span></h3>
+        <p id="roleStatusText" style="font-size: 13px; font-weight: bold;"></p>
+        
+        <div id="userMembershipsList" class="tier-section" style="margin-top: 15px;">
+            <h4>📋 Aapki Tamam Jama Shuda Entries / Committees:</h4>
+            <ul id="myEntriesList" style="padding-left: 15px; font-size: 13px;"></ul>
+        </div>
+
+        <div id="announcementBox" class="result-box hidden-section">
+            <h4>📢 Admin Announcement / Notification:</h4>
+            <p id="announcementText" style="font-weight: bold; color: #27ae60;"></p>
+        </div>
+
+        <!-- Admin Control Panel -->
+        <div id="adminPanel" class="hidden-section" style="margin-top: 20px; border-top: 2px dashed #ccc; padding-top: 15px;">
+            <h3 style="color: #e67e22;">⚙️ Owner / Admin Control Panel (Tier-Wise)</h3>
+            
+            <label>Select Committee Tier to Manage & Run Draw:</label>
+            <select id="adminSelectedTier" onchange="renderAdminTierData()">
+                <option value="20" selected>Rs. 20 Committee Tier</option>
+                <option value="50">Rs. 50 Committee Tier</option>
+                <option value="75">Rs. 75 Committee Tier</option>
+                <option value="100">Rs. 100 Committee Tier</option>
+            </select>
+
+            <label>Select Committee Size:</label>
+            <select id="adminSelectedTarget" onchange="renderAdminTierData()">
+                <option value="5">5 Members</option>
+                <option value="10" selected>10 Members</option>
+                <option value="15">15 Members</option>
+                <option value="20">20 Members</option>
+            </select>
+
+            <div class="admin-box">
+                <h4>📥 Pending Deposit Requests (<span id="adminTierNameDisplay">Rs. 20 / 10 Members</span>):</h4>
+                <ul id="pendingList" style="padding-left: 15px; font-size: 13px;"></ul>
+            </div>
+
+            <div class="admin-box" style="background: #eaf2f8; border-left-color: #2980b9;">
+                <h4>👥 Approved Active Entries in this Committee (<span id="activeCountDisplay">0</span> Active):</h4>
+                <ul id="activeMembersList" style="padding-left: 15px; font-size: 13px;"></ul>
+            </div>
+
+            <label>Broadcast Notification Message for All Participants:</label>
+            <textarea id="broadcastMessage" rows="2" placeholder="e.g. Members pure hone mein kuch der baqi hai!"></textarea>
+            <button onclick="sendBroadcast()" style="background: #2980b9; margin-top: 5px;">📢 Sabko Notification Bhejein</button>
+
+            <button onclick="runAdvancedDraw()" style="background: #e67e22; margin-top: 15px;">🎲 Is Amount + Committee Size ka Draw Run Karein</button>
+            <button onclick="logoutAdmin()" style="background: #7f8c8d; margin-top: 10px;">🔒 Logout</button>
+        </div>
+    </div>
+
+    <!-- Results Display -->
+    <div class="card hidden-section" id="resultsScreen">
+        <h3>🎉 Draw Results</h3>
+        <div class="admin-box" id="adminEarningsBox" style="display:none;">
+            <h4>💼 Owner 10% Cut:</h4>
+            <p id="earningsText"></p>
+        </div>
+        <div class="result-box">
+            <h4>🏆 Is Round ke Winners:</h4>
+            <p id="winnersDisplay"></p>
+            <p id="shareDisplay"></p>
+        </div>
+    </div>
+    <p style="font-size:11px;color:#7f8c8d;line-height:1.5;margin-top:18px;">Note: Browser-side Firebase code alone is not production-grade security. Configure restrictive Firebase Database Rules and authenticated admin access before handling real payments. Random prize/paid-entry operations must comply with applicable local laws.</p>
+</div>
+
+<script>
+    // --- FIREBASE CLOUD CONFIGURATION ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyCQ5copLZvjnzHpn3m9TenLxYEE4IDWac",
+        authDomain: "cometee-walay.firebaseapp.com",
+        databaseURL: "https://cometee-walay-default-rtdb.firebaseio.com",
+        projectId: "cometee-walay",
+        storageBucket: "cometee-walay.appspot.com",
+        messagingSenderId: "686011949816",
+        appId: "1:686011949816:web:30c264f0c87a07d289518d",
+        measurementId: "G-G5BQL4N8PG"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const dbRef = firebase.database().ref();
+
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "F12" || 
+            (event.ctrlKey && event.shiftKey && event.key === "I") || 
+            (event.ctrlKey && event.key === "U")) {
+            event.preventDefault();
+            alert("Security Alert: Yeh action allowed nahi hai!");
+        }
+    });
+
+    const ADMIN_PHONES = ["03442343168", "03325889195"];
+    const ENCODED_PIN = "Nzg2MA=="; // Secret PIN: 7860
+
+    function verifyPin(inputPin) {
+        try {
+            return btoa(inputPin) === ENCODED_PIN;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    function updateDepositInstruction() {
+        let val = document.getElementById('regCommitteeType').value;
+        document.getElementById('depositNotice').innerText = `* Aapko Rs. ${val} jama karwanay honge.`;
+    }
+
+    function showLoginScreen() {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'block';
+    }
+
+    function showRegisterScreen() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('registerScreen').style.display = 'block';
+    }
+
+    function showAdminLogin() {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'block';
+    }
+
+    function normalizeTid(tid) {
+        return tid.trim().toUpperCase().replace(/\s+/g, '');
+    }
+
+    // Firebase keys cannot contain . # $ / [ ]; encode each character as hex.
+    function makeTidKey(tid) {
+        return Array.from(normalizeTid(tid)).map(ch => ch.charCodeAt(0).toString(16)).join('_');
+    }
+
+    function submitRegistration() {
+        let phone = document.getElementById('regPhone').value.trim();
+        let amount = document.getElementById('regCommitteeType').value;
+        let targetLimit = document.getElementById('regTargetLimit').value;
+        let rawTid = document.getElementById('regTid').value.trim();
+        let tid = normalizeTid(rawTid);
+
+        if(phone === "" || tid === "") {
+            alert("Barah-e-karam apna mobile number aur Transaction ID (TID) enter karein!");
+            return;
+        }
+        if(!/^03\d{9}$/.test(phone)) {
+            alert("Mobile number 03XXXXXXXXX format mein enter karein.");
+            return;
+        }
+        if(tid.length < 4 || tid.length > 80) {
+            alert("Transaction ID kam az kam 4 aur zyada se zyada 80 characters ki honi chahiye.");
+            return;
+        }
+        if(ADMIN_PHONES.includes(phone)) {
+            alert("Yeh number Admin ka hai! Aapko register hone ki zaroorat nahi, 'Admin Login' use karein.");
+            return;
+        }
+
+        const tidKey = makeTidKey(tid);
+        const entryKey = dbRef.child('members').push().key;
+        const tidLockRef = dbRef.child('tidIndex/' + tidKey);
+
+        // First check legacy member records, then acquire a globally unique TID lock.
+        dbRef.child('members').once('value').then((snapshot) => {
+            let legacyDuplicate = false;
+            snapshot.forEach((childSnapshot) => {
+                const m = childSnapshot.val() || {};
+                if(normalizeTid(String(m.tid || '')) === tid) legacyDuplicate = true;
+            });
+            if(legacyDuplicate) {
+                throw new Error("DUPLICATE_TID");
+            }
+            return tidLockRef.transaction(current => current === null ? entryKey : undefined);
+        }).then((result) => {
+            if(!result.committed) {
+                alert("❌ Yeh Transaction ID pehle use ho chuki hai. Har TID sirf aik entry ke liye valid hai.");
+                return;
+            }
+            const entry = {
+                phone: phone,
+                amount: String(amount),
+                targetLimit: String(targetLimit),
+                tid: tid,
+                tidKey: tidKey,
+                status: 'Pending',
+                timestamp: Date.now()
+            };
+            return dbRef.child('members/' + entryKey).set(entry).then(() => {
+                alert("Aapki request submit ho gayi hai. TID poore system mein lock ho chuki hai aur dobara kisi category/committee mein use nahi ho sakti.");
+                showLoginScreen();
+            }).catch(error => {
+                // Release the lock only if it still belongs to this failed entry.
+                return tidLockRef.transaction(current => current === entryKey ? null : current).then(() => { throw error; });
+            });
+        }).catch((error) => {
+            if(error && error.message === "DUPLICATE_TID") {
+                alert("❌ Yeh TID pehle se kisi entry mein mojood hai. Aik reference number sirf aik baar use ho sakta hai.");
+            } else {
+                console.error(error);
+                alert("Registration save nahi ho saki. Firebase connection/rules check karein. " + (error.message || ""));
+            }
+        });
+    }
+
+    function userLogin() {
+        let phone = document.getElementById('loginPhone').value.trim();
+        if(phone === "") {
+            alert("Mobile number enter karein!");
+            return;
+        }
+
+        if(ADMIN_PHONES.includes(phone)) {
+            alert("Yeh admin number hai! Barah-e-karam 'Admin Login' par ja kar Secret PIN enter karein.");
+            showAdminLogin();
+            return;
+        }
+
+        dbRef.child('members').once('value').then((snapshot) => {
+            let found = false;
+            snapshot.forEach((childSnapshot) => {
+                let m = childSnapshot.val();
+                if(m.phone === phone) {
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                alert("Yeh number kisi bhi record mein nahi mila! Pehle deposit form fill karein.");
+                showRegisterScreen();
+            } else {
+                openDashboard(phone);
+            }
+        });
+    }
+
+    function adminDirectLogin() {
+        let phone = document.getElementById('adminLoginPhone').value.trim();
+        let pin = document.getElementById('adminLoginPin').value.trim();
+
+        if(!ADMIN_PHONES.includes(phone)) {
+            alert("Yeh ghalat Admin number hai!");
+            return;
+        }
+
+        if(!verifyPin(pin)) {
+            alert("Ghalat Secret PIN!");
+            return;
+        }
+
+        openDashboard(phone);
+    }
+
+    function logoutAdmin() {
+        showRegisterScreen();
+    }
+
+    function openDashboard(phone) {
+        document.getElementById('registerScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('adminLoginScreen').style.display = 'none';
+        document.getElementById('userDashboard').style.display = 'block';
+        document.getElementById('userDisplayName').innerText = phone;
+
+        dbRef.child('announcement').on('value', (snapshot) => {
+            let msg = snapshot.val();
+            if(msg) {
+                document.getElementById('announcementBox').style.display = 'block';
+                document.getElementById('announcementText').innerText = msg;
+            }
+        });
+
+        if(ADMIN_PHONES.includes(phone)) {
+            document.getElementById('roleStatusText').innerText = "Status: Verified Administrator / Owner";
+            document.getElementById('roleStatusText').style.color = "#e67e22";
+            document.getElementById('adminPanel').style.display = 'block';
+            document.getElementById('userMembershipsList').style.display = 'none';
+            listenAdminPanelData();
+        } else {
+            document.getElementById('roleStatusText').innerText = "Status: Member Account Hub";
+            document.getElementById('roleStatusText').style.color = "#27ae60";
+            
+            dbRef.child('members').on('value', (snapshot) => {
+                let myEntriesListEl = document.getElementById('myEntriesList');
+                myEntriesListEl.innerHTML = "";
+                let count = 0;
+
+                snapshot.forEach((childSnapshot) => {
+                    let m = childSnapshot.val();
+                    if(m.phone === phone) {
+                        count++;
+                        let statusColor = m.status === 'Active' ? 'green' : '#e67e22';
+                        myEntriesListEl.innerHTML += `<li><b>Committee:</b> Rs.${m.amount} | <b>Target:</b> ${m.targetLimit} Members | <b>TID:</b> ${m.tid} | <b>Status:</b> <span style="color:${statusColor}; font-weight:bold;">${m.status}</span></li>`;
+                    }
+                });
+
+                if(count === 0) {
+                    myEntriesListEl.innerHTML = "<li>Aapki koi entry mojood nahi hai.</li>";
+                }
+            });
+        }
+    }
+
+    function listenAdminPanelData() {
+        dbRef.child('members').on('value', (snapshot) => {
+            renderAdminTierData();
+        });
+    }
+
+    function renderAdminTierData() {
+        let selectedTier = String(document.getElementById('adminSelectedTier').value);
+        let selectedTarget = String(document.getElementById('adminSelectedTarget').value);
+        document.getElementById('adminTierNameDisplay').innerText = `Rs. ${selectedTier} / ${selectedTarget} Members`;
+
+        dbRef.child('members').once('value', (snapshot) => {
+            let pendingListEl = document.getElementById('pendingList');
+            let activeListEl = document.getElementById('activeMembersList');
+            pendingListEl.innerHTML = "";
+            activeListEl.innerHTML = "";
+            let pendingFound = false;
+            let activeCount = 0;
+
+            snapshot.forEach((childSnapshot) => {
+                let m = childSnapshot.val() || {};
+                let entryKey = childSnapshot.key;
+                // Exact match on BOTH amount and committee size. No cross-category mixing.
+                if(String(m.amount) === selectedTier && String(m.targetLimit) === selectedTarget) {
+                    if(m.status === 'Pending') {
+                        pendingFound = true;
+                        pendingListEl.innerHTML += `<li><b>${escapeHtml(m.phone || '')}</b> — Rs.${m.amount} (${m.targetLimit} Members) | TID: <span style="color:#c0392b;">${escapeHtml(m.tid || '')}</span> <button onclick="approveMember('${entryKey}')" style="padding:2px 8px; width:auto; font-size:12px; margin:0 5px; background:#27ae60;">Approve ✅</button></li>`;
+                    } else if(m.status === 'Active') {
+                        activeCount++;
+                        activeListEl.innerHTML += `<li><b>${escapeHtml(m.phone || '')}</b> (Rs.${m.amount} | ${m.targetLimit} Members) <span style="color:green;">✔ Active</span> [TID: ${escapeHtml(m.tid || '')}]</li>`;
+                    }
+                }
+            });
+            document.getElementById('activeCountDisplay').innerText = `${activeCount} / ${selectedTarget}`;
+            if(!pendingFound) pendingListEl.innerHTML = "<li>Is exact committee mein koi pending request nahi hai.</li>";
+            if(activeCount === 0) activeListEl.innerHTML = "<li>Is exact committee mein abhi koi active member nahi hai.</li>";
+            if(activeCount >= Number(selectedTarget)) {
+                activeListEl.innerHTML += `<li style="color:#b45309;font-weight:bold;">Committee capacity full hai. Mazeed approvals band hain.</li>`;
+            }
+        });
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    function approveMember(entryKey) {
+        let rejectionReason = "";
+        dbRef.child('members').transaction(current => {
+            if(!current || !current[entryKey]) {
+                rejectionReason = "Entry nahi mili.";
+                return;
+            }
+            const entry = current[entryKey];
+            if(entry.status !== 'Pending') {
+                rejectionReason = "Yeh entry ab Pending nahi hai.";
+                return;
+            }
+            const amount = String(entry.amount);
+            const target = String(entry.targetLimit);
+            let activeCount = 0;
+            Object.keys(current).forEach(key => {
+                const m = current[key] || {};
+                if(m.status === 'Active' && String(m.amount) === amount && String(m.targetLimit) === target) activeCount++;
+            });
+            if(activeCount >= Number(target)) {
+                rejectionReason = `Rs. ${amount} ki ${target}-member committee full ho chuki hai.`;
+                return;
+            }
+            current[entryKey].status = 'Active';
+            current[entryKey].approvedAt = Date.now();
+            return current;
+        }).then(result => {
+            if(!result.committed) {
+                alert(rejectionReason || "Approval nahi ho saki. Dobara refresh karke check karein.");
+                renderAdminTierData();
+                return;
+            }
+            alert("Entry approve ho gayi hai. Yeh sirf isi amount aur isi committee-size mein count hogi.");
+            renderAdminTierData();
+        }).catch(error => {
+            console.error(error);
+            alert("Approval mein masla hua: " + (error.message || ""));
+        });
+    }
+
+    function sendBroadcast() {
+        let msg = document.getElementById('broadcastMessage').value.trim();
+        if(msg === "") {
+            alert("Message likhein!");
+            return;
+        }
+        dbRef.child('announcement').set(msg, function(error) {
+            if(!error) {
+                alert("Notification sabhi ko bhej diya gaya hai!");
+            }
+        });
+    }
+
+    // Fisher-Yates shuffle: every entry is shuffled independently, not grouped by phone.
+    function secureRandomIndex(max) {
+        if(max <= 1) return 0;
+        if(window.crypto && window.crypto.getRandomValues) {
+            const range = 0x100000000;
+            const limit = Math.floor(range / max) * max;
+            const value = new Uint32Array(1);
+            let n;
+            do { window.crypto.getRandomValues(value); n = value[0]; } while(n >= limit);
+            return n % max;
+        }
+        return Math.floor(Math.random() * max);
+    }
+
+    function fisherYatesShuffle(items) {
+        const shuffled = items.slice();
+        for(let i = shuffled.length - 1; i > 0; i--) {
+            const j = secureRandomIndex(i + 1);
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function runAdvancedDraw() {
+        const selectedTier = String(document.getElementById('adminSelectedTier').value);
+        const selectedTarget = String(document.getElementById('adminSelectedTarget').value);
+
+        if(!confirm(`Kya aap Rs. ${selectedTier} ki ${selectedTarget}-member committee ka random draw run karna chahte hain?`)) return;
+
+        dbRef.child('members').once('value').then(snapshot => {
+            const eligibleEntries = [];
+            snapshot.forEach(childSnapshot => {
+                const m = childSnapshot.val() || {};
+                // Exact amount + exact target + Active status. Entry key is the ticket identity.
+                if(m.status === 'Active' && String(m.amount) === selectedTier && String(m.targetLimit) === selectedTarget) {
+                    eligibleEntries.push({ key: childSnapshot.key, ...m });
+                }
+            });
+
+            const requiredTarget = Number(selectedTarget);
+            if(eligibleEntries.length !== requiredTarget) {
+                alert(`Draw abhi nahi ho sakta. Is committee ke liye exactly ${requiredTarget} approved entries zaroori hain. Abhi ${eligibleEntries.length} active entries hain. Extra ya kam entries par draw run nahi hoga.`);
+                return;
+            }
+
+            const shuffledEntries = fisherYatesShuffle(eligibleEntries);
+            const totalPool = shuffledEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
+            const ownerCut = totalPool * 0.10;
+            const remainingPool = totalPool - ownerCut;
+            const winnersCount = Math.max(1, Math.round(shuffledEntries.length * 0.3));
+            const winners = shuffledEntries.slice(0, winnersCount);
+            const perWinnerShare = remainingPool / winnersCount;
+
+            const winnerText = winners.map((w, i) => `${i + 1}. ${w.phone} (Entry: ${w.key.slice(-6)}, TID: ${w.tid})`).join('\n');
+            const resultRecord = {
+                amount: selectedTier,
+                targetLimit: selectedTarget,
+                winners: winners.map(w => ({ entryKey: w.key, phone: w.phone, tid: w.tid })),
+                eligibleCount: shuffledEntries.length,
+                winnersCount: winnersCount,
+                totalPool: totalPool,
+                ownerCut: ownerCut,
+                perWinnerShare: perWinnerShare,
+                algorithm: 'Fisher-Yates',
+                timestamp: Date.now()
+            };
+
+            return dbRef.child('drawHistory').push(resultRecord).then(() => {
+                const announcement = `🏆 Rs. ${selectedTier} / ${selectedTarget}-member committee ka draw complete. Winners: ${winners.map(w => w.phone).join(', ')}`;
+                return dbRef.child('announcement').set(announcement).then(() => {
+                    document.getElementById('resultsScreen').style.display = 'block';
+                    document.getElementById('adminEarningsBox').style.display = 'block';
+                    document.getElementById('earningsText').innerText = `Rs. ${selectedTier} / ${selectedTarget} Members | 10% amount: Rs. ${ownerCut.toFixed(2)} | Total pool: Rs. ${totalPool.toFixed(2)}`;
+                    document.getElementById('winnersDisplay').innerHTML = winners.map((w, i) => `• <b>${i + 1}. ${escapeHtml(w.phone)}</b> — Entry: ${escapeHtml(w.key.slice(-6))} — TID: ${escapeHtml(w.tid)}`).join('<br>');
+                    document.getElementById('shareDisplay').innerHTML = `<b>Har winner ka hissa:</b> Rs. ${perWinnerShare.toFixed(2)}<br><b>Shuffling:</b> Fisher-Yates random shuffle<br><b>Eligible entries:</b> ${shuffledEntries.length}`;
+                    alert(`Rs. ${selectedTier} ki ${selectedTarget}-member committee ka draw complete ho gaya.`);
+                });
+            });
+        }).catch(error => {
+            console.error(error);
+            alert("Draw run nahi ho saka: " + (error.message || "Firebase error"));
+        });
+    }
+
+</script>
+
+</body>
+</html>
